@@ -21,6 +21,8 @@ class WikibaseConnection:
         self.class_dataset = 'Q11'
         self.prop_query_string = 'P29'
         self.prop_html_table = 'P31'
+        self.prop_classifier = 'P35'
+        self.prop_declaration = 'P37'
 
         # WikibaseIntegrator config
         wbi_config['MEDIAWIKI_API_URL'] = os.environ['MEDIAWIKI_API_URL']
@@ -40,7 +42,6 @@ class WikibaseConnection:
         namespaces = """
         PREFIX wd: <%(wikibase_url)sentity/>
         PREFIX wdt: <%(wikibase_url)sprop/direct/>
-        
         """ % {'wikibase_url': self.wikibase_url}
 
         return namespaces
@@ -61,7 +62,7 @@ class WikibaseConnection:
         
         return results
     
-    def properties(self, output: str = 'lookup'):
+    def properties(self):
         prop_query = """
         %s
 
@@ -72,10 +73,15 @@ class WikibaseConnection:
         }
         """ % self.sparql_namespaces()
 
-        return self.sparql_query(
+        df = self.sparql_query(
             query=prop_query,
-            output=output
+            output='dataframe'
         )
+        
+        df['pid'] = df.property.apply(lambda x: x.split('/')[-1])
+        df['p_type'] = df.property_type.apply(lambda x: x.split('#')[-1])
+        
+        return df
 
     def classification(self, output: str = 'lookup'):
         class_query = """
@@ -96,30 +102,89 @@ class WikibaseConnection:
             output=output
         )
 
-    def datasources(self, output: str = 'dataframe'):
-        datasource_query = """
+    def datasource(self, ds_qid: str, output: str = 'dataframe'):
+        ds_query = """
         %(namespaces)s
 
-        SELECT ?ds ?dsLabel ?query_string ?html_table
-        WHERE {
-            ?ds wdt:%(prop_instance_of)s wd:%(class_dataset)s .
-            OPTIONAL { ?ds wdt:%(prop_query_string)s ?query_string . }
-            OPTIONAL { ?ds wdt:%(prop_html_table)s ?html_table . }
-            SERVICE wikibase:label { bd:serviceParam wikibase:language "en" . }
-        }
+        SELECT ?wdLabel ?ps_ ?ps_Label ?wdpqLabel ?pq_Label 
+        {
+          VALUES (?datasource) {(wd:%(ds_qid)s)}
+
+          ?datasource ?p ?statement .
+          ?statement ?ps ?ps_ .
+
+          ?wd wikibase:claim ?p.
+          ?wd wikibase:statementProperty ?ps.
+
+          OPTIONAL {
+          ?statement ?pq ?pq_ .
+          ?wdpq wikibase:qualifier ?pq .
+          }
+
+          SERVICE wikibase:label { bd:serviceParam wikibase:language "en" }
+        } ORDER BY ?datasourceLabel ?wd ?statement ?ps_
         """ % {
             'namespaces': self.sparql_namespaces(),
-            'prop_instance_of': self.prop_instance_of,
-            'class_dataset': self.class_dataset,
-            'prop_query_string': self.prop_query_string,
-            'prop_html_table': self.prop_html_table
+            'ds_qid': ds_qid
+        }
+
+        ds_wb_source = self.sparql_query(
+            query=ds_query,
+            output="dataframe"
+        )
+        
+        if output == 'datatrame':
+            return ds_wb_source
+        
+        return self.format_datasource(ds_qid, ds_wb_source)
+
+    def format_datasource(self, ds_qid, ds_wb_source):
+        d_config = {
+            ds_qid: {
+                'label_prop': None,
+                'description_prop': None,
+                'alias_prop': None,
+                'claims': []
+            }   
         }
         
-        return self.sparql_query(
-            query=datasource_query,
-            output=output
-        )
+        label_item = ds_wb_source[ds_wb_source.ps_Label == 'label']
+        if not label_item.empty:
+            d_config[ds_qid]['label_prop'] = label_item.iloc[0].pq_Label
 
+        alias_item = ds_wb_source[ds_wb_source.ps_Label == 'alias']
+        if not alias_item.empty:
+            d_config[ds_qid]['alias_prop'] = alias_item.iloc[0].pq_Label
+
+        description_item = ds_wb_source[ds_wb_source.ps_Label == 'description']
+        if not description_item.empty:
+            d_config[ds_qid]['description_prop'] = description_item.iloc[0].pq_Label
+
+        html_table = ds_wb_source[ds_wb_source.wdLabel == 'html table']
+        if not html_table.empty:
+            d_config[ds_qid]['interface_type'] = 'html table'
+            d_config[ds_qid]['interface_url'] = html_table.iloc[0].ps_
+
+        entity_classifier = ds_wb_source[ds_wb_source.wdLabel == 'entity classifier']
+        if not entity_classifier.empty:
+            d_config[ds_qid]['instance_of_qid'] = entity_classifier.iloc[0].ps_.split('/')[-1]
+            d_config[ds_qid]['instance_of_label'] = entity_classifier.iloc[0].ps_Label
+
+        property_map_items = ds_wb_source[
+            (ds_wb_source.wdLabel == 'property from data source')
+            &
+            (~ds_wb_source.ps_Label.isin(['label','alias','description']))
+        ]
+        if not property_map_items.empty:
+            for index, row in property_map_items.iterrows():
+                d_config[ds_qid]['claims'].append({
+                    'pid': row.ps_.split('/')[-1],
+                    'label': row.ps_Label,
+                    'source_prop': row.pq_Label
+                })
+                
+        return d_config
+    
     # Utilities
     def sparql_query(self, query: str, endpoint: str = None, output: str = 'raw'):
         if not endpoint:
@@ -227,3 +292,11 @@ class WikibaseConnection:
         df_qids_values['value'] = df_qids_values.apply(self.simplify_claim_value, axis=1)
 
         return df_qids_values[["qid","property","value"]]
+    
+    def item_collection_processor(self, dict_items):
+        if not isinstance(dict_items, dict):
+            return
+        all_items = []
+        for i, item_list in dict_items.items():
+            all_items.extend(item_list)
+        return all_items
