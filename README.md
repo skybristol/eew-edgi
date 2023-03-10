@@ -1,8 +1,14 @@
 # Knowledgebase Experimentation for the Environmental Enforcement Watch project
 
-This project develops a workflow to build the fundamental data the EEW project is integrating and making sense of from the USEPA's ECHO platform and other sources. It operates against a wikibase.cloud instance of Wikibase.
+This project develops a workflow to build the fundamental data the EEW project is integrating and making sense of from the USEPA's ECHO platform and other sources. It operates against the https://eew-edgi.wikibase.cloud instance of Wikibase. Read more about the project on that wikibase instance's front page.
 
-Some rules I'm figuring out here:
+## Re-use of these codes
+
+Anyone is welcome to take and build on anything I'm doing here - it is Unlicensed. I'm not currently building any of this as a deployable codebase, and you won't be able to run everything here unless you build it to operate on your own Wikibase instance (local of wikibase.cloud). I use environment variables in whatever platform I'm executing this on (currently a Pangeo environment via the ESIPLab) to store access information. You'd have to rework that according to your own preferences.
+
+## Some principles I'm figuring out here
+
+My notebooks will have specific text and notes on what I'm working through. I sometimes come back to the readme with things I've worked out as general principles.
 
 * We need a few hard and fast constraints to make all of the automated parts of this work.
     * Every source needs to be an item that can be pointed to with sufficient detailed characteristics to link to how things came to be in the knowledgebase. I'm trying to drive actual processing from the content of the items to make this reality.
