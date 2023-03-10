@@ -5,6 +5,7 @@ from urllib.parse import urlparse
 from urllib.parse import parse_qs
 from wikibaseintegrator.wbi_config import config as wbi_config
 from wikibaseintegrator import WikibaseIntegrator, wbi_login
+from wikibaseintegrator import models, datatypes
 from nested_lookup import nested_lookup
 
 class WikibaseConnection:
@@ -16,6 +17,7 @@ class WikibaseConnection:
         self.wikibase_url = os.environ['WIKIBASE_URL']
         
         # Hard assumed values
+        # Knowing these values in advance saves some time
         self.prop_instance_of = 'P1'
         self.prop_subclass_of = 'P2'
         self.class_dataset = 'Q11'
@@ -23,6 +25,9 @@ class WikibaseConnection:
         self.prop_html_table = 'P31'
         self.prop_classifier = 'P35'
         self.prop_declaration = 'P37'
+        
+        self.models = models
+        self.datatypes = datatypes
 
         # WikibaseIntegrator config
         wbi_config['MEDIAWIKI_API_URL'] = os.environ['MEDIAWIKI_API_URL']
@@ -84,6 +89,25 @@ class WikibaseConnection:
         return df
 
     def classification(self, output: str = 'lookup'):
+        class_query = """
+        %(namespaces)s
+
+        SELECT ?item ?itemLabel 
+        WHERE {
+            ?item wdt:%(prop_subclass)s ?subclass.
+            SERVICE wikibase:label { bd:serviceParam wikibase:language "en" . }
+        }
+        """ % {
+            'namespaces': self.sparql_namespaces(),
+            'prop_subclass': self.prop_subclass_of
+        }
+        
+        return self.sparql_query(
+            query=class_query,
+            output=output
+        )
+    
+    def datasets(self):
         class_query = """
         %(namespaces)s
 
