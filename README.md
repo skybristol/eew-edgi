@@ -6,6 +6,12 @@ This project develops a workflow to build the fundamental data the EEW project i
 
 Anyone is welcome to take and build on anything I'm doing here - it is Unlicensed. I'm not currently building any of this as a deployable codebase, and you won't be able to run everything here unless you build it to operate on your own Wikibase instance (local of wikibase.cloud). I use environment variables in whatever platform I'm executing this on (currently a Pangeo environment via the ESIPLab) to store access information. You'd have to rework that according to your own preferences.
 
+## Data and Processing
+
+I finally figured out (remembered?) that one of the datasets the Microsoft Planetary Computer folks had set up for use was a bunch of the Census data. These are built products from the 2020 census for demographic work, but they are perfectly suitable for related work I need to do here. I may still leverage the methods developed previously for building out reference sources on tribal lands, states, counties, etc., but when I need to run geospatial processes to clean up and link FRS facilities to these areas, I can do that very efficiently working with what MPC has in the cloud.
+
+I also figured out something I was clueless about - I can hit a remote Jupyter server with a notebook from my local VSCode environment. The MPC folks have some nice [instructions](https://planetarycomputer.microsoft.com/docs/overview/ui-vscode/) on that. I have to decide whether or not I'm going to push items and claims directly to my Wikibase instance from processing on MPC or dump out an intermediary file to be loaded elsewhere. There's not a great way to manage custom environments in the MPC Hub (a Pangeo/JupyterLab instance), so it's a little difficult to set up necessary Python packages and environment variables there. It would be much cleaner to do data processing there and then send results right into the knowledge graph.
+
 ## Some principles I'm figuring out here
 
 My notebooks will have specific text and notes on what I'm working through. I sometimes come back to the readme with things I've worked out as general principles.
