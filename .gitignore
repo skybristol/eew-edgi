@@ -130,5 +130,5 @@ dmypy.json
 
 ./datacache/*
 *.parquet
-
+*.json
 .DS_Store
