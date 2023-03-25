@@ -99,8 +99,13 @@ class WikibaseConnection:
     def key_lookup(self, df_results: dict, k_prop: str, v_prop: str):
         return df_results.set_index(k_prop)[v_prop].to_dict()
 
-    def wb_ref_data(self, ref):
-        q = self.config["queries"][ref]
+    def wb_ref_data(self, ref=None, query=None):
+        if ref is not None:
+            q = self.config["queries"][ref]
+        elif query is not None:
+            q = query
+        else:
+            return
         q_url = f"{self.sparql_endpoint}?query={q}"
         json_results = self.url_sparql_query(q_url)
         df = self.df_sparql_results(json_results)
