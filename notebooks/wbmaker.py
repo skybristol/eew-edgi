@@ -94,6 +94,8 @@ class WikibaseConnection:
 
     def df_sparql_results(self, json_results: dict):
         data_records = self.simplify_sparql_results(json_results)
+        if data_records is None:
+            return
         return pd.DataFrame(data_records)
 
     def key_lookup(self, df_results: dict, k_prop: str, v_prop: str):
@@ -101,12 +103,11 @@ class WikibaseConnection:
 
     def wb_ref_data(self, ref=None, query=None):
         if ref is not None:
-            q = self.config["queries"][ref]
-        elif query is not None:
-            q = query
+            q_url = f"{self.sparql_endpoint}?query={self.config['queries'][ref]}"
+        elif query is not None and not query.startswith("http"):
+            q_url = f"{self.sparql_endpoint}?query={query}"
         else:
-            return
-        q_url = f"{self.sparql_endpoint}?query={q}"
+            q_url = query
         json_results = self.url_sparql_query(q_url)
         df = self.df_sparql_results(json_results)
 
