@@ -128,7 +128,7 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-./datacache/*
+datacache/
 *.parquet
 *.json
 .DS_Store
